@@ -4,8 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>立馥 耗材管理</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="立馥耗材">
+<meta name="theme-color" content="#3A4B54">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -13,12 +21,12 @@
 :root{--navy:#3A4B54;--ink:#1E272E;--muted:#4C5862;--line:#CBD2D8;--hair:#DDE3E3;--bg:#F5F6F8;--card:#fff;--panel:#EEF1F4;--orange:#DD6B20;--orange-deep:#B9531F;--orange-tint:#F6D2BC;--wash:#F8EBE3;--signal:#B04E1E;--red:#B3261E;--groove:#8A9696;--enamel:#3F4B4B;--root:#EAD9C2;--root-line:#A68F70;--root-p:#D9C3A3;
 --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;--serif:"Noto Serif TC","Songti TC",serif}
 *{box-sizing:border-box}[hidden]{display:none!important}
-html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+html,body{overflow-x:hidden;margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
 .wrap{max-width:1280px;margin:0 auto;padding:14px 16px 40px;display:flex;flex-direction:column;gap:14px}
 .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .top h1{margin:0;font-family:var(--serif);font-size:22px;color:var(--navy);letter-spacing:1px}
 .top .sub{font-size:12px;color:var(--muted)}
-button{font-family:inherit;font-size:15px;color:var(--ink);background:var(--card);border:1px solid var(--groove);border-radius:6px;min-height:44px;padding:0 14px;cursor:pointer}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent;font-family:inherit;font-size:15px;color:var(--ink);background:var(--card);border:1px solid var(--groove);border-radius:6px;min-height:44px;padding:0 14px;cursor:pointer}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
 button.on{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:700}
 button.pri{background:var(--orange-deep);border-color:var(--orange-deep);color:#fff;font-weight:700}
@@ -148,6 +156,19 @@ tr.del td{background:#F7DAD7}
 tr.del td input,tr.del td span{text-decoration:line-through;opacity:.6}
 input.chg{border-color:var(--orange);box-shadow:0 0 0 1px var(--orange)}
 button.del{min-height:30px;height:30px;width:30px;padding:0;color:var(--red);border-color:#e3b4b0}
+.bcard{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.bcard .bh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.bcard .bh b{font-size:18px;color:var(--navy)}
+.mchart{display:flex;flex-direction:column;gap:4px;align-items:center;width:max-content;margin:0 auto}
+.mchart .tb.off{opacity:.28;pointer-events:none}
+.mchart .tb.has:not(.pick) .c{fill:#fff;stroke:var(--orange);stroke-width:.8;stroke-dasharray:1.2 .8}
+.bl{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;background:#fff;text-align:left;width:100%;min-height:48px}
+.bl .ck{width:22px;height:22px;border-radius:5px;border:2px solid var(--groove);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700}
+.bl.on{border-color:var(--orange);background:var(--wash)}
+.kbhint{display:none;text-align:center;font-size:12px;color:var(--muted,#8a96a0);margin:-4px 0 6px}
+@media (hover:hover) and (pointer:fine){.kbhint{display:block}}
+.bl b,.bl.on b{color:var(--navy);font-size:15px}
+.bl.on .ck{background:var(--orange-deep);border-color:var(--orange-deep)}
 .boot{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
 .boot .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px;max-width:560px;width:100%;display:flex;flex-direction:column;gap:12px}
 .boot textarea{width:100%;min-height:150px;font-family:ui-monospace,monospace;font-size:13px;border:1px solid var(--groove);border-radius:6px;padding:8px}
@@ -180,7 +201,19 @@ tr.void td{color:#9aa3a8;text-decoration:line-through}
 .dots span.f{background:var(--navy)}
 .pad{display:grid;grid-template-columns:repeat(3,72px);gap:10px;justify-content:center}
 .pad button{height:60px;border-radius:30px;font-size:24px;padding:0}
-.pad button.fn{font-size:14px;border-color:transparent;background:none;color:var(--muted)}
+.pad button.fn{font-size:15px;font-weight:700;border-color:transparent;background:none;color:var(--orange-deep)}
+.pad button.fn svg{width:30px;height:30px;display:block;margin:auto}
+.pad button{-webkit-user-select:none;user-select:none;transition:background .08s}
+.pad button.hit,.pad button:active{background:var(--panel);transform:scale(.96)}
+.pad button.fn.hit{background:var(--wash)}
+@media (max-width:700px){
+  .top{flex-direction:column;align-items:stretch;gap:8px}
+  #nav{margin-left:0;overflow-x:auto;scrollbar-width:none;touch-action:pan-x;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+  #nav::-webkit-scrollbar{display:none}
+  #nav button{flex:0 0 auto}
+  .advbox{justify-content:flex-end}
+  .top h1{font-size:20px}
+}
 .err{color:var(--red);font-size:13px;font-weight:700;min-height:20px;text-align:center}
 .toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 20px;border-radius:8px;z-index:60}
 td input{min-height:34px;height:34px;font-size:13px;width:100%}
@@ -192,7 +225,7 @@ td input[type=checkbox]{width:20px;min-height:20px}
 <body>
 <div class="wrap">
   <div class="top">
-    <div><h1 id="title">計費耗材登記</h1><div class="sub">立馥牙醫診所　口腔顎面外科　·　<span id="ver">v1.0</span><span id="conn" class="conn"></span></div></div>
+    <div><h1 id="title">計費耗材登記</h1><div class="sub">立馥牙醫診所　口腔顎面外科　·　<span id="ver">v1.1</span><span id="conn" class="conn"></span></div></div>
     <div id="nav" class="seg r"><i></i></div>
     <div id="advbox" class="advbox"></div>
   </div>
@@ -257,7 +290,7 @@ td input[type=checkbox]{width:20px;min-height:20px}
     <section class="pane">
       <h2>從病人身上取下，歸回庫存</h2>
       <label class="lbl" style="display:flex;flex-direction:column;gap:4px;max-width:360px">輸入病人姓名（打姓或名的一個字即可，畫面只顯示遮罩姓名）<input type="text" id="b-q" autocomplete="off"></label>
-      <div id="b-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="b-list" style="display:flex;flex-direction:column;gap:12px"></div>
     </section>
     <section class="pane">
       <h2>目前在病人身上<span class="hint" style="font-weight:400">只顯示數量</span></h2>
@@ -334,7 +367,7 @@ td input[type=checkbox]{width:20px;min-height:20px}
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
           <input type="month" id="a-month"><select id="a-doc"></select>
           <span id="a-sum" class="hint"></span>
-          <button id="btn-names" class="sm" style="margin-left:auto">顯示病人姓名</button><button id="btn-xlsx" class="pri">匯出本月 Excel</button>
+          <button id="btn-setup" class="sm" style="margin-left:auto">新裝置設定</button><button id="btn-names" class="sm">顯示病人姓名</button><button id="btn-xlsx" class="pri">匯出本月 Excel</button>
         </div>
         <div class="scroll"><table><thead><tr><th>日期</th><th>登記時間</th><th>病人</th><th>醫師</th><th>牙位</th><th>類別</th><th>品項</th><th class="n">數量</th><th class="n">金額</th><th>登記人</th><th>備註</th><th></th></tr></thead><tbody id="a-rows"></tbody></table></div>
       </div>
@@ -497,37 +530,44 @@ function remoteRender(){ if(!UI_READY) return; clearTimeout(RR); RR = setTimeout
 }, 400); }
 let UI_READY = false;
 function bootMsg(h){ $('boot').hidden = false; $('boot-msg').innerHTML = h; }
-function readCfg(){ for(const k of [PTS_CFG_KEY, OWN_CFG_KEY]){ try{ const c = JSON.parse(localStorage.getItem(k)); if(c && c.firebaseConfig && c.workspaceId) return c; }catch(e){} } return null; }
+function cfgFromHash(){ const m = location.hash.match(/^#setup=([A-Za-z0-9_\-]+)/); if(!m) return; try{ const j = JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g,'+').replace(/_/g,'/'))))); if(j && j.firebaseConfig && j.firebaseConfig.apiKey && j.workspaceId) localStorage.setItem(OWN_CFG_KEY, JSON.stringify(j)); }catch(e){} history.replaceState(null,'',location.pathname+location.search); }
+function setupLink(){ const c = readCfg(); if(!c) return ''; const b = btoa(unescape(encodeURIComponent(JSON.stringify({firebaseConfig:c.firebaseConfig, workspaceId:c.workspaceId})))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); return location.origin+location.pathname+'#setup='+b; }
+function resetCfg(){ setupForm(); }
+function readCfg(){ for(const k of [OWN_CFG_KEY, PTS_CFG_KEY]){ try{ const c = JSON.parse(localStorage.getItem(k)); if(c && c.firebaseConfig && c.workspaceId) return c; }catch(e){} } return null; }
 function setupForm(err){
   bootMsg(`<div>這台裝置還沒有連線設定。若同一台裝置用過點數系統，會自動沿用；否則請貼上點數系統用的 Firebase 設定與工作區 ID。</div>
     <label class="lbl">Firebase 設定（firebaseConfig）<textarea id="cf-cfg" placeholder="apiKey: &quot;...&quot;, authDomain: &quot;...&quot;, projectId: &quot;...&quot; ..."></textarea></label>
     <label class="lbl">工作區 ID<input type="text" id="cf-ws" autocomplete="off" style="width:100%"></label>
-    <div class="err" style="text-align:left" id="cf-err">${esc(err||'')}</div><div class="btns"><button type="button" class="pri" id="cf-ok">連線</button></div>`);
+    <div class="err" style="text-align:left" id="cf-err">${esc(err||'')}</div><div class="btns"><button type="button" class="pri" id="cf-ok">連線</button></div>
+    <div class="hint">更簡單：在已經能用的電腦登入院長管理，按「新裝置設定」，用這台裝置掃 QR code 或打開那個連結。</div>`);
+  const c = readCfg(); if(c){ $('cf-cfg').value = JSON.stringify(c.firebaseConfig, null, 1); $('cf-ws').value = c.workspaceId; }
 }
-function parseCfg(raw){ let t = raw.trim().replace(/\/\/[^\n]*/g,'').replace(/const\s+\w+\s*=\s*/g,'').replace(/;\s*$/,'').trim(); if(!t.startsWith('{')) t = '{'+t+'}'; try{ return JSON.parse(t); }catch(e){} try{ return Function('return ('+t+')')(); }catch(e){} return null; }
+function parseCfg(raw){ let t = raw.replace(/[\u201C\u201D\u201E\u2033\uFF02]/g,'"').replace(/[\u2018\u2019\u2032\uFF07]/g,"'").replace(/\uFF1A/g,':').replace(/\uFF0C/g,',').replace(/[\u00A0\u3000\u200B]/g,' ').trim().replace(/\/\/[^\n]*/g,'').replace(/const\s+\w+\s*=\s*/g,'').replace(/;\s*$/,'').trim(); if(!t.startsWith('{')) t = '{'+t+'}'; try{ return JSON.parse(t); }catch(e){} try{ return Function('return ('+t+')')(); }catch(e){} return null; }
 function boot(){
-  const cfg = readCfg(); if(!cfg){ setupForm(); return; }
+  cfgFromHash(); const cfg = readCfg(); if(!cfg){ setupForm(); return; }
   try{ if(!firebase.apps.length) firebase.initializeApp(cfg.firebaseConfig); fdb = firebase.firestore(); fdb.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }
   catch(e){ setupForm('初始化失敗：'+e.message); return; }
   WS = cfg.workspaceId; bootMsg('連線中…');
   const auth = firebase.auth(), go = ()=>subscribeAll();
-  if(auth.currentUser) go(); else auth.signInAnonymously().then(go).catch(e=>bootMsg('登入失敗：'+esc(e.message)+'<br>請確認網路後重新整理。'));
+  if(auth.currentUser) go(); else auth.signInAnonymously().then(go).catch(e=>bootMsg('連線失敗：'+esc(e.code||'')+' '+esc(e.message)+'<br>請確認網路後重新整理；若一直失敗，請把這段文字拍給院長。<div class="btns"><button type="button" id="cf-reset">重新設定連線</button></div>'));
 }
 function subscribeAll(){
   const need = new Set(['items','main','daily','drafts','assistants','settings']), ready = k=>{ if(need.delete(k) && !need.size) firstReady(); };
-  const err = e=>{ console.error(e); bootMsg('讀取資料失敗：'+esc(e.message)); };
+  const err = e=>{ console.error(e); bootMsg('讀取資料失敗：'+esc(e.code||'')+' '+esc(e.message)+'<br>工作區：'+esc(WS)+'<div class="btns"><button type="button" id="cf-reset">重新設定連線</button></div>'); };
   const cut = new Date(Date.now()-400*864e5).toISOString();
   COLS.forEach(c=>{ let q = fdb.collection(cpath(c)); if(['moves','picks','counts','setlog'].includes(c)) q = q.where('ts','>=',cut); q.onSnapshot(snap=>{ applyIn(c, snap); ready(c); }, err); });
   ['main','daily','drafts'].forEach(k=>fdb.collection(cpath('meta')).doc(k).onSnapshot(d=>{ applyMeta(k, d.exists ? d.data() : null); ready(k); }, err));
   fdb.collection(`workspaces/${WS}/assistants`).onSnapshot(snap=>{ STAFF = snap.docs.map(d=>Object.assign({id:d.id}, d.data())).filter(a=>a.active!==false && a.pin).map(a=>({id:a.id, name:a.name, pin:String(a.pin)})); ready('assistants'); remoteRender(); }, err);
-  fdb.collection(`workspaces/${WS}/settings`).doc('main').onSnapshot(d=>{ const x = d.exists ? d.data() : {}; ADMIN_PW = x.principalPassword || x.adminPassword || null; const ds = (x.doctors||[]).map(o=>o && o.name).filter(Boolean); if(ds.length) DOCTORS = ds; if(UI_READY) fillDocSel(); ready('settings'); remoteRender(); }, err);
+  fdb.collection(`workspaces/${WS}/settings`).doc('main').onSnapshot(d=>{ const x = d.exists ? d.data() : {}; WS_OK = d.exists; ADMIN_PW = x.principalPassword || x.adminPassword || null; const ds = (x.doctors||[]).map(o=>o && o.name).filter(Boolean); if(ds.length) DOCTORS = ds; if(UI_READY) fillDocSel(); ready('settings'); remoteRender(); }, err);
   window.addEventListener('online', connState); window.addEventListener('offline', connState); connState();
 }
 function connState(){ const on = navigator.onLine; $('conn').textContent = on ? '' : '● 離線中，資料會在連線後自動上傳'; $('conn').className = 'conn'+(on?'':' off'); }
 function seedItems(){ return JSON.parse(JSON.stringify(SEED_ITEMS)).concat(genGroupItems(), genB()).map((x,k)=>Object.assign(x,{ord:k})); }
+let WS_OK = false;
 function firstReady(){
+  if(!WS_OK && !STAFF.length){ bootMsg(`<div style="color:var(--red);font-weight:700">找不到工作區「${esc(WS)}」</div><div>這個工作區裡沒有點數系統的助理名單與設定，所以 4 碼都不會通過。請確認工作區 ID 跟點數系統的一模一樣（英文大小寫、空格都要相同）。</div>`+'<div class="btns"><button type="button" id="cf-reset">重新設定連線</button></div>'); return; }
   if(!DB.items.length){ DB.items = seedItems(); store.save(); }
-  $('boot').hidden = true; UI_READY = true; $('testnote').hidden = !TEST; startUI();
+  if(UI_READY) return; $('boot').hidden = true; UI_READY = true; $('testnote').hidden = !TEST; $('ver').textContent = 'v1.1　·　工作區 '+WS; startUI();
 }
 
 /* ---------- 病人姓名加密（只有院長用「報表密碼」解得開） ---------- */
@@ -571,8 +611,8 @@ function closeDlg(){ $('ov').hidden = true; PINCB = null; }
 /* 電話式 4 碼鍵盤：按滿 4 碼自動送出。cb(助理) 於驗證成功後執行 */
 function pinPad(label, cb){
   PIN = ''; PINCB = cb;
-  return `<div class="lbl" style="text-align:center">${esc(label)}</div><div class="dots" id="dots"><span></span><span></span><span></span><span></span></div><div class="err" id="pin-err"></div>
-    <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button type="button" data-pk="${n}">${n}</button>`).join('')}<button type="button" class="fn" data-pk="c">清除</button><button type="button" data-pk="0">0</button><button type="button" class="fn" data-pk="b" aria-label="倒退">⌫</button></div>`;
+  return `<div class="lbl" style="text-align:center">${esc(label)}</div><div class="dots" id="dots"><span></span><span></span><span></span><span></span></div><div class="err" id="pin-err"></div><div class="kbhint">也可以直接用鍵盤數字鍵輸入</div>
+    <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button type="button" data-pk="${n}">${n}</button>`).join('')}<button type="button" class="fn" data-pk="c">清除</button><button type="button" data-pk="0">0</button><button type="button" class="fn" data-pk="b" aria-label="倒退"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M17 9l-6 6M11 9l6 6"/></svg></button></div>`;
 }
 function pinKey(k){
   if(!PINCB) return;
@@ -600,6 +640,8 @@ function toothSvg(n, scale, cls){
 }
 function fitChart(){ const c = $('chart'); if(!c || !c.offsetParent) return; c.style.zoom = 1; const a = c.parentElement.clientWidth, w = c.scrollWidth; if(a>0 && w>a) c.style.zoom = Math.max(.3,(a-2)/w); }
 window.addEventListener('resize', fitChart);
+function fitMini(){ document.querySelectorAll('.mchart').forEach(c=>{ c.style.zoom = 1; const a = c.parentElement.clientWidth, w = c.scrollWidth; if(a>0 && w>a) c.style.zoom = Math.max(.3,(a-2)/w); }); }
+window.addEventListener('resize', fitMini);
 const toothStr = () => S.teeth.slice().sort().join(',');
 function renderChart(){
   const quad = (row, up) => `<div class="quad ${up?'up':'dn'}">` + row.map(n=>{ const pick = S.teeth.includes(String(n)), no = `<span class="no">${n}</span>`, svg = toothSvg(n, 3.1, pick?'sel':'');
@@ -692,7 +734,7 @@ async function commit(who){
     else if(l.multi){ const j = DB.jars.find(x=>x.id===l.jar); if(j){ j.uses++; m.jarId = j.id; m.note = '沿用 '+md(j.openedAt)+' '+j.doctor+' 開封'; } }
     else if(l.itemId) m.stockOut = l.qty;
     if(m.stockOut) addStock(l.itemId, -m.stockOut);
-    if(l.ret){ m.ret = true; m.note = '放在病人身上'; for(let n=0;n<l.qty;n++) DB.loans.push({id:uid(), moveId:m.id, itemId:l.itemId, name:l.name, mask, patientEnc:enc, doctor:S.doc, tooth, date, by:who.name, back:null}); }
+    if(l.ret){ m.ret = true; m.note = '放在病人身上'; const tl = S.teeth.slice().sort(); for(let n=0;n<l.qty;n++) DB.loans.push({id:uid(), moveId:m.id, itemId:l.itemId, name:l.name, mask, patientEnc:enc, doctor:S.doc, tooth: tl.length===l.qty ? tl[n] : tooth, date, by:who.name, back:null}); }
     return m; });
   DB.moves.push(...moves); store.save();
   S.cart = []; S.teeth = []; $('f-pt').value = ''; closeDlg(); renderHome(); toast('已登記 '+moves.length+' 筆（'+who.name+'）');
@@ -979,16 +1021,41 @@ function pkDone(){
 }
 let MGR = null;
 const outCount = itemId => DB.loans.filter(L=>L.itemId===itemId && !L.back).length;
+const lname = L => L.mask || L.patient || '';
+const BSEL = {}; let BQ = '';
+function backGroups(){
+  const q = ($('b-q').value||'').trim(); if(q!==BQ){ BQ = q; Object.keys(BSEL).forEach(k=>delete BSEL[k]); }
+  if(!q) return [];
+  const list = DB.loans.filter(L=>!L.back && [...q].every(ch=>ch==='○' || lname(L).includes(ch))), map = {};
+  list.forEach(L=>{ (map[lname(L)] = map[lname(L)] || []).push(L); });
+  return Object.keys(map).map(k=>{ if(!BSEL[k]) BSEL[k] = new Set(map[k].map(L=>L.id)); return {key:k, loans:map[k].sort((a,b)=>String(a.tooth).localeCompare(String(b.tooth)))}; });
+}
+function miniChart(g){
+  const sel = BSEL[g.key], byT = {}; g.loans.forEach(L=>{ if(/^\d\d$/.test(L.tooth||'')) (byT[L.tooth] = byT[L.tooth] || []).push(L); });
+  const teeth = Object.keys(byT); if(!teeth.length) return '';
+  const prim = teeth.some(t=>+t>=50), perm = teeth.some(t=>+t<50);
+  const quad = (row, up) => `<div class="quad ${up?'up':'dn'}">` + row.map(n=>{ const L = byT[n], on = L && L.some(x=>sel.has(x.id));
+    const no = `<span class="no">${n}</span>`, svg = toothSvg(n, 2.3, on?'sel':'');
+    return `<button type="button" class="tb ${L?'has':'off'} ${on?'pick':''}" ${L?`data-btooth="${esc(g.key)}|${n}"`:'tabindex="-1"'} aria-label="牙位 ${n}">${up?no+svg:svg+no}</button>`; }).join('') + '</div>';
+  let h = ''; if(perm) h += `<div class="crow">${quad(ROWS[0],true)}${quad(ROWS[1],true)}</div>`;
+  if(prim) h += `<div class="crow">${quad(PROWS[0],true)}${quad(PROWS[1],true)}</div><div class="crow">${quad(PROWS[2],false)}${quad(PROWS[3],false)}</div>`;
+  if(perm) h += `<div class="crow">${quad(ROWS[2],false)}${quad(ROWS[3],false)}</div>`;
+  return `<div class="scroll"><div class="mchart">${h}</div></div><div class="hint" style="text-align:center">橘色是這次要歸庫的；點牙齒可取消或加回。</div>`;
+}
 function renderBack(){
-  const q = ($('b-q').value||'').trim(), list = q ? DB.loans.filter(L=>!L.back && [...q].every(ch=>ch==='○' || (L.mask||L.patient||'').includes(ch))) : [];
-  $('b-list').innerHTML = !q ? '<div class="hint">輸入姓名後顯示這位病人身上的配件。</div>' : list.length ? list.map(L=>`<div class="line"><div class="nm"><b>${esc(L.name)}</b><span class="hint">${esc(L.mask||L.patient)}　${L.tooth?'牙位 '+esc(L.tooth)+'　':''}${esc(L.doctor)}　${md(L.date)} 放入</span></div><button type="button" class="sm pri" data-back="${L.id}">歸庫</button></div>`).join('') : '<div class="hint">找不到這位病人身上的配件。</div>';
+  const gs = backGroups();
+  $('b-list').innerHTML = !BQ ? '<div class="hint">輸入姓名後顯示這位病人身上的配件。</div>' : !gs.length ? '<div class="hint">找不到這位病人身上的配件。</div>' : gs.map(g=>{ const sel = BSEL[g.key], n = g.loans.filter(L=>sel.has(L.id)).length;
+    return `<div class="bcard"><div class="bh"><b>${esc(g.key)}</b><span class="hint">身上共 ${g.loans.length} 個配件</span></div>${miniChart(g)}
+      <div style="display:flex;flex-direction:column;gap:6px">${g.loans.map(L=>`<button type="button" class="bl ${sel.has(L.id)?'on':''}" data-bsel="${esc(g.key)}|${L.id}"><span class="ck">${sel.has(L.id)?'✓':''}</span><span style="flex:1;min-width:0"><b>${esc(L.name)}</b><span class="hint" style="display:block">${L.tooth?'牙位 '+esc(L.tooth)+'　':''}${esc(L.doctor)}　${md(L.date)} 放入</span></span></button>`).join('')}</div>
+      <button type="button" class="pri" data-bgo="${esc(g.key)}" ${n?'':'disabled'}>歸庫選取的 ${n} 個</button></div>`; }).join('');
   const out = DB.items.filter(i=>i.ret && outCount(i.id));
+  fitMini();
   $('b-sum').innerHTML = out.length ? `<table><thead><tr><th>品項</th><th class="n">在病人身上</th><th class="n">庫存</th></tr></thead><tbody>${out.map(i=>`<tr><td>${esc(i.name)}</td><td class="n">${outCount(i.id)}</td><td class="n">${i.stock}</td></tr>`).join('')}</tbody></table>` : '<div class="hint">目前沒有在病人身上的配件。</div>';
 }
-function backDlg(id){
-  const L = DB.loans.find(x=>x.id===id); if(!L) return;
-  dialog(`<h3>歸庫確認</h3><table><tbody><tr><td class="hint">品項</td><td><b>${esc(L.name)}</b></td></tr><tr><td class="hint">病人</td><td>${esc(L.mask||L.patient)}${L.tooth?'　牙位 '+esc(L.tooth):''}</td></tr><tr><td class="hint">放入</td><td>${esc(L.date)}　${esc(L.doctor)}</td></tr></tbody></table>
-    ${pinPad('歸庫人請按個人 4 碼確認', who=>{ L.back = new Date().toISOString(); L.backBy = who.name; addStock(L.itemId, 1); const it = itemOf(L.itemId); if(it) it.reuse = (it.reuse||0)+1; store.save(); closeDlg(); renderBack(); toast('已歸庫（'+who.name+'）'); })}
+function backDlg(key){
+  const g = backGroups().find(x=>x.key===key); if(!g) return; const L = g.loans.filter(x=>BSEL[key].has(x.id)); if(!L.length) return;
+  dialog(`<h3>歸庫確認</h3><div><b>${esc(key)}</b>　共 ${L.length} 個</div><table><tbody>${L.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.tooth?'牙位 '+esc(x.tooth):''}</td></tr>`).join('')}</tbody></table>
+    ${pinPad('歸庫人請按個人 4 碼確認', who=>{ const now = new Date().toISOString(); L.forEach(x=>{ x.back = now; x.backBy = who.name; addStock(x.itemId, 1); const it = itemOf(x.itemId); if(it) it.reuse = (it.reuse||0)+1; }); store.save(); closeDlg(); delete BSEL[key]; renderBack(); toast('已歸庫 '+L.length+' 個（'+who.name+'）'); })}
     <div class="btns"><button type="button" data-close>取消</button></div>`);
 }
 function renderSet(){ if(!MGR) return; saveBar(); $('set-who').textContent = MGR.name+' 已解鎖'; $('set-f').innerHTML = filterBar('set', DB.items); $('set-rows').innerHTML = itemRows(false); }
@@ -1034,6 +1101,8 @@ function showPage(p){
 }
 
 /* ---------- 事件 ---------- */
+let PKDOWN = false;
+document.addEventListener('pointerdown', e=>{ const b = e.target.closest('[data-pk]'); if(!b) return; e.preventDefault(); PKDOWN = true; pinKey(b.dataset.pk); b.classList.add('hit'); setTimeout(()=>b.classList.remove('hit'), 140); });
 document.addEventListener('click', e=>{
   const b = e.target.closest('button'); if(!b) return; const d = b.dataset;
   if(PAGE==='pick') pkTouch(); advTouch();
@@ -1045,7 +1114,7 @@ document.addEventListener('click', e=>{
   else if(b.id==='pk-done') pkDone();
   else if(b.id==='pk-out') pkLogout();
   else if(d.undo){ const p = DB.picks.find(x=>x.id===d.undo); if(p && !p.undone){ p.undone = true; p.undoneAt = new Date().toISOString(); addStock(p.itemId, p.qty); store.save(); renderPick(); toast('已撤銷'); } }
-  else if(d.pk) pinKey(d.pk);
+  else if(d.pk){ if(!PKDOWN) pinKey(d.pk); PKDOWN = false; }
   else if(d.page) showPage(d.page);
   else if(b.id==='ck-out'){ CK.who = null; if(ADV && ADV.role==='mgr') advLock(); else renderCount(); }
   else if(d.ckcat){ CK.cat = d.ckcat; renderCount(); }
@@ -1073,7 +1142,9 @@ document.addEventListener('click', e=>{
   else if(d.doc){ S.doc = d.doc; renderHome(); }
   else if(d.cat){ S.cat = d.cat; renderHome(); }
   else if(d.grp){ S.grp[S.cat] = d.grp; renderHome(); }
-  else if(d.back) backDlg(d.back);
+  else if(d.bgo) backDlg(d.bgo);
+  else if(d.bsel){ const [k,id] = d.bsel.split('|'); const st = BSEL[k]; if(st){ st.has(id) ? st.delete(id) : st.add(id); renderBack(); } }
+  else if(d.btooth){ const [k,t] = d.btooth.split('|'), g = backGroups().find(x=>x.key===k); if(g){ const ids = g.loans.filter(L=>L.tooth===t).map(L=>L.id), st = BSEL[k], all = ids.every(i=>st.has(i)); ids.forEach(i=>all ? st.delete(i) : st.add(i)); renderBack(); } }
   else if(d.reuse){ const j = DB.jars.find(x=>x.id===d.reuse); if(j) addItem(j.itemId, j.id); }
   else if(d.item) addItem(d.item);
   else if(d.q){ const [k,v] = d.q.split(':'), l = S.cart[+k]; l.qty = Math.max(1, l.qty+(+v)); renderHome(); }
@@ -1095,7 +1166,11 @@ document.addEventListener('click', e=>{
   else if(d.fill) fillDlg(d.fill);
   else if(b.id==='f-ok'){ const v = $('f-amt').value, a = Number(v); if(v==='' || !(a>=0)){ $('f-err').textContent = '請填金額。'; return; } const m = DB.moves.find(x=>x.id===d.id); m.amount = a; m.price = m.qty ? a/m.qty : a; m.pending = false; m.note = ''; store.save(); closeDlg(); renderAdmin(); toast('已補上金額'); }
   else if(d.jclose){ DB.jars.find(j=>j.id===d.jclose).closed = new Date().toISOString(); store.save(); renderAdmin(); }
-  else if(b.id==='cf-ok'){ const c = parseCfg($('cf-cfg').value), w = $('cf-ws').value.trim(); if(!c || !c.apiKey || !c.projectId){ $('cf-err').textContent = '設定格式不對，請確認有 apiKey 和 projectId。'; return; } if(!w){ $('cf-err').textContent = '請填工作區 ID。'; return; } try{ localStorage.setItem(OWN_CFG_KEY, JSON.stringify({firebaseConfig:c, workspaceId:w})); }catch(e){} boot(); }
+  else if(b.id==='cf-reset') resetCfg();
+  else if(b.id==='btn-setup'){ const u = setupLink(); dialog(`<h3>新裝置設定</h3><div>在要設定的手機或平板上，用相機掃這個 QR code（或把下面的連結傳過去打開），就會自動連到工作區 <b>${esc(WS)}</b>。</div><div id="qr" style="display:flex;justify-content:center;padding:8px;background:#fff;border-radius:8px"></div><textarea id="su-link" readonly style="font-size:12px;min-height:70px">${esc(u)}</textarea><div class="hint">這個連結只包含連線設定，不含任何密碼或病人資料；資料安全由資料庫規則與每個人的 4 碼把關。</div><div class="btns"><button type="button" id="su-copy">複製連結</button><button type="button" class="pri" data-close>完成</button></div>`);
+    try{ new QRCode($('qr'), {text:u, width:220, height:220, correctLevel:QRCode.CorrectLevel.L}); }catch(e){ $('qr').textContent = 'QR code 載入失敗，請改用複製連結。'; } }
+  else if(b.id==='su-copy'){ const t = $('su-link'); (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).then(()=>toast('已複製連結')).catch(()=>{ t.select(); document.execCommand('copy'); toast('已複製連結'); }); }
+  else if(b.id==='cf-ok'){ const c = parseCfg($('cf-cfg').value), w = $('cf-ws').value.trim(); if(!c || !c.apiKey || !c.projectId){ $('cf-err').textContent = '設定格式不對，請確認有 apiKey 和 projectId。'; return; } if(!w){ $('cf-err').textContent = '請填工作區 ID。'; return; } try{ localStorage.setItem(OWN_CFG_KEY, JSON.stringify({firebaseConfig:c, workspaceId:w})); }catch(e){} location.reload(); }
   else if(b.id==='btn-xlsx') exportXlsx();
   else if(b.id==='btn-names') nameKeyDlg(()=>renderAdmin());
   else if(b.id==='nk-set'){ const a = $('nk-1').value, c = $('nk-2').value; if(a.length<6){ $('nk-err').textContent = '至少 6 碼。'; return; } if(a!==c){ $('nk-err').textContent = '兩次輸入不一樣。'; return; } if(a===ADMIN_PW){ $('nk-err').textContent = '請不要和院長登入密碼相同。'; return; } b.disabled = true; b.textContent = '設定中…'; setupKeys(a).then(()=>{ closeDlg(); toast('報表密碼已設定'); if(NKAFTER) NKAFTER(); }).catch(e=>{ b.disabled = false; b.textContent = '設定'; $('nk-err').textContent = '設定失敗：'+e.message; }); }
@@ -1120,7 +1195,11 @@ document.addEventListener('change', e=>{
 });
 document.addEventListener('keydown', e=>{
   if(e.key==='Escape' && !$('ov').hidden){ closeDlg(); return; }
-  if(PINCB && (!$('ov').hidden || (PAGE==='pick' && !PK.who) || (PAGE==='count' && !CK.who)) && !/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)){ if(/^[0-9]$/.test(e.key)){ e.preventDefault(); pinKey(e.key); } else if(e.key==='Backspace'){ e.preventDefault(); pinKey('b'); } return; }
+  const inField = /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName) && (($('ov').hidden) || $('ov').contains(e.target));
+  if(PINCB && $('dots') && (!$('ov').hidden || (PAGE==='pick' && !PK.who) || (PAGE==='count' && !CK.who)) && !inField && !e.ctrlKey && !e.metaKey && !e.altKey){
+    const k = /^[0-9]$/.test(e.key) ? e.key : e.key==='Backspace' ? 'b' : e.key==='Delete' ? 'c' : null;
+    if(k){ e.preventDefault(); if(document.activeElement && document.activeElement!==document.body && !$('ov').contains(document.activeElement)) document.activeElement.blur(); pinKey(k); const b = document.querySelector(`[data-pk="${k}"]`); if(b){ b.classList.add('hit'); setTimeout(()=>b.classList.remove('hit'), 140); } }
+    return; }
   if(e.key==='Enter' && !e.isComposing){ const id = {'nk-pw':'nk-ok','nk-2':'nk-set','g-pw':'g-ok','a-pw':'a-ok','c-name':'c-ok','f-amt':'f-ok','v-why':'v-ok'}[e.target.id]; if(id){ e.preventDefault(); $(id).click(); } }
 });
 $('ov').addEventListener('click', e=>{ if(e.target.id==='ov') closeDlg(); });
